@@ -19,7 +19,16 @@ rabbit:
   image: rabbitmq:3-management
   ports:
     - "8282:15672"
-    - "5672:5672" 
+    - "5672:5672"
+# varnish:
+#  image: eeacms/varnish
+#  container_name: magento2-devbox-varnish
+#  ports:
+#    - "1749:6081"
+#  links:
+#    - web
+#  environment:
+#    - BACKENDS=web
 web:
   build: web
   container_name: magento2-devbox-web
@@ -31,6 +40,7 @@ web:
     - ./scripts:/root/scripts
   ports:
     - "1748:80"
+    - "1749:6081"
   links:
     - db:db
     - rabbit:rabbit

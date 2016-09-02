@@ -8,6 +8,8 @@ FROM php:7.0.9-apache
 MAINTAINER "Oleksandr Iegorov <oiegorov@magento.com>"
 
 RUN apt-get update && apt-get install -y \
+    varnish \
+    htop \
     apt-utils \
     cron \
     curl \
@@ -40,6 +42,8 @@ RUN apt-get clean && apt-get update && apt-get install -y npm \
     && npm update -g npm && npm install -g grunt-cli && npm install -g gulp
 
 RUN docker-php-ext-install bcmath
+
+RUN echo "vcl 4.0;backend default {.host = "127.0.0.1";.port = "80";}" > /etc/varnish/default.vcl
 
 RUN a2enmod rewrite
 

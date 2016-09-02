@@ -23,6 +23,7 @@ EOM
 
 read -p 'Do you wish to install RabbitMQ (y/n): ' install_rabbitmq
 
+link_to_rabbit=''
 if [ $install_rabbitmq = 'y' ]
     then
         cat << 'EOM' >> docker-compose.yml
@@ -33,9 +34,36 @@ rabbit:
     - "8282:15672"
     - "5672:5672" 
 EOM
+link_to_rabbit=$(cat <<SETVAR
+
+    - rabbit:rabbit
+
+SETVAR
+)
 fi
 
-cat << 'EOM' >> docker-compose.yml
+read -p 'Do you wish to install Varnish (y/n): ' install_varnish
+
+link_to_varnish=''
+if [ $install_varnish = 'y' ]
+    then
+        cat << 'EOM' >> docker-compose.yml
+varnish:
+  image: eeacms/varnish
+  ports:
+  - "1748:80"
+  links:
+  - web
+EOM
+link_to_varnish=$(cat <<SETVAR
+
+    - varnish:varnish
+
+SETVAR
+)
+fi
+
+cat << EOM >> docker-compose.yml
 web:
   build: web
   container_name: magento2-devbox-web
@@ -47,9 +75,9 @@ web:
     - ./scripts:/root/scripts
   ports:
     - "1748:80"
+#    - "9000:9000"
   links:
-    - db:db
-    - rabbit:rabbit
+    - db:db$link_to_rabbit$link_to_varnish
   command: "apache2-foreground"
 EOM
 
