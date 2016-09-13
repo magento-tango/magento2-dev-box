@@ -50,38 +50,48 @@ request () {
         fi
     fi
 
-    eval "$varName=$value"
+    export $varName=$value
     echo $output
 }
 
+while test $# -gt 0; do
+    case $1 in
+        --*)
+            export $(echo $1 | sed -e 's/^--\([^=]*\)=[^=]*$/\1/g' | sed -e 's/-/_/g')=$(echo $1 | sed -e 's/^[^=]*=//g')
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
 echo 'Creating docker-compose config'
-request 'install_rabbitmq' 'Do you wish to install RabbitMQ?' 1
-webroot_path='./shared/webroot'
-request 'use_existing_sources' 'Do you have existing copy of Magento 2?' 1
 
-if [[ $use_existing_sources = 1 ]]; then
-    request 'webroot_path' 'Please provide full path to the magento2 folder'
+if [[ $webroot_path ]]; then
+    use_existing_sources=1
+else
+    webroot_path='./shared/webroot'
+
+    if [[ ! $use_existing_sources ]]; then
+        request 'use_existing_sources' 'Do you have existing copy of Magento 2?' 1
+    fi
+
+    if [[ $use_existing_sources = 1 ]]; then
+        request 'webroot_path' 'Please provide full path to the magento2 folder'
+    fi
 fi
 
-composer_path='./shared/.composer'
-request 'yes_no' 'Do you have existing copy of .composer folder?' 1
-
-if [[ $yes_no = 1 ]]; then
-    request 'composer_path' 'Please provide full path to the .composer folder'
+if [[ ! $composer_path ]]; then
+    composer_path='./shared/.composer'
 fi
 
-ssh_path='./shared/.ssh'
-request 'yes_no' 'Do you have existing copy of .ssh folder?' 1
-
-if [[ $yes_no = 1 ]]; then
-    request 'ssh_path' 'Please provide full path to the .ssh folder'
+if [[ ! $ssh_path ]]; then
+    ssh_path='./shared/.ssh'
 fi
 
-db_path='./shared/db'
-request 'yes_no' 'Do you have existing copy of the database files folder?' 1
-
-if [[ $yes_no = 1 ]]; then
-    request 'db_path' 'Please provide full path to the database files folder'
+if [[ ! $db_path ]]; then
+    db_path='./shared/db'
 fi
 
 db_host=db
@@ -125,15 +135,23 @@ if [[ $install_rabbitmq = 1 ]]; then
 EOM
 fi
 
-request 'redis_session' 'Do you wish to setup Redis as session storage?' 1
-request 'redis_all_cache' 'Do you wish to setup Redis as default cache for all types (except Full Page Cache)' 1
-request 'redis_cache' 'Do you wish to setup Redis for Full Page Cache' 1
-
-if [[ $redis_cache = 0 ]]; then
-    request 'install_varnish' 'Do you wish to setup Varnish for Full Page Cache' 1
+if [[ ! $redis_session ]]; then
+    redis_session=1
 fi
 
-([[ $redis_cache = 1 ]] || [[ $redis_session = 1 ]] || [[ $redis_all_cache = 1 ]]) && install_redis=1 || install_redis=0
+if [[ ! $redis_cache ]]; then
+    redis_cache=1
+fi
+
+if [[ $redis_fpc = 1 ]]; then
+    varnish_fpc=0
+else
+    if [[ ! $varnish_fpc ]]; then
+        varnish_fpc=1
+    fi
+fi
+
+([[ $redis_session = 1 ]] || [[ $redis_cache = 1 ]] || [[ $redis_fpc = 1 ]]) && install_redis=1 || install_redis=0
 redis_host='redis'
 
 if [[ $install_redis = 1 ]]; then
@@ -147,7 +165,7 @@ fi
 web_port=1748
 varnish_host_container=magento2-devbox-varnish
 
-if [[ $install_varnish = 1 ]]; then
+if [[ $varnish_fpc = 1 ]]; then
     cat << EOM >> docker-compose.yml
   varnish:
     image: magento/magento2devbox_varnish:latest
@@ -218,8 +236,8 @@ docker exec -it --privileged -u magento2 magento2-devbox-web \
 if [[ $install_redis = 1 ]]; then
     docker exec -it --privileged -u magento2 magento2-devbox-web \
         php -f /home/magento2/scripts/devbox magento:setup:redis \
-            --as-all-cache=$redis_all_cache \
-            --as-cache=$redis_cache \
+            --as-all-cache=$redis_cache \
+            --as-cache=$redis_fpc \
             --as-session=$redis_session \
             --host=$redis_host \
             --magento-path=$magento_path
@@ -233,7 +251,7 @@ if [[ $install_elasticsearch = 1 ]]
                 --elastic-host=$elastic_host --elastic-port=$elastic_port
 fi
 
-if [[ $install_varnish = 1 ]]; then
+if [[ $varnish_fpc = 1 ]]; then
     varnish_file=/home/magento2/scripts/default.vcl
 
     docker exec -it --privileged -u magento2 magento2-devbox-web \
