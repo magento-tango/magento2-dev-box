@@ -211,9 +211,29 @@ docker exec -it --privileged -u magento2 magento2-devbox-web \
     php -f /home/magento2/scripts/devbox magento:download \
         --use-existing-sources=$use_existing_sources
 
+if [[ ! $install_sample_data ]]; then
+    install_sample_data=1
+fi
+
+if [[ ! $backend_path ]]; then
+    backend_path='admin'
+fi
+
+if [[ ! $admin_user ]]; then
+    admin_user='admin'
+fi
+
+if [[ ! $admin_password ]]; then
+    admin_password='admin123'
+fi
+
 docker exec -it --privileged -u magento2 magento2-devbox-web \
     php -f /home/magento2/scripts/devbox magento:setup \
         --use-existing-sources=$use_existing_sources \
+        --install-sample-data=$install_sample_data \
+        --backend-path=$backend_path \
+        --admin-user=$admin_user \
+        --admin-password=$admin_password \
         --rabbitmq-install=$install_rabbitmq \
         --rabbitmq-host=$rabit_host \
         --rabbitmq-port=$rabbit_port
@@ -252,4 +272,20 @@ fi
 docker exec -it --privileged -u magento2 magento2-devbox-web mysql -h db -u root -proot -e 'CREATE DATABASE IF NOT EXISTS magento_integration_tests;'
 docker cp ./web/integration/install-config-mysql.php magento2-devbox-web:/var/www/magento2/dev/tests/integration/etc/install-config-mysql.php
 
-docker exec -it --privileged -u magento2 magento2-devbox-web php -f /home/magento2/scripts/devbox magento:prepare
+if [[ ! $static_deploy ]]; then
+    static_deploy=1
+fi
+
+if [[ ! $static_grunt_compile ]]; then
+    static_grunt_compile=1
+fi
+
+if [[ ! $di_compile ]]; then
+    di_compile=1
+fi
+
+docker exec -it --privileged -u magento2 magento2-devbox-web \
+    php -f /home/magento2/scripts/devbox magento:prepare \
+        --static-deploy=$static_deploy \
+        --static-grunt-compile=$static_grunt_compile \
+        --di-compile=$di_compile
