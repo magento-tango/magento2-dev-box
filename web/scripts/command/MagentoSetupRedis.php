@@ -75,6 +75,8 @@ class MagentoSetupRedis extends AbstractCommand
                     'compress_data' => '0'
                 ]
             ];
+
+            $this->executeCommands('cd /var/www/magento2 && rm -rf var/page_cache/*');
         } else {
             unset($config['cache']['frontend']['page_cache']);
         }
@@ -89,6 +91,7 @@ class MagentoSetupRedis extends AbstractCommand
             ];
         } else {
             unset($config['cache']['frontend']['default']);
+            $this->executeCommands('cd /var/www/magento2 && rm -rf var/cache/*');
         }
 
         file_put_contents($configPath, sprintf("<?php\n return %s;", var_export($config, true)));

@@ -157,6 +157,21 @@ EOM
 web_port=1749
 fi
 
+read -p 'Do you wish to setup ElasticSearch (y/N): ' install_elasticsearch
+
+if [[ $install_elasticsearch = 'y' ]]
+  then
+    elastic_host='elasticsearch'
+    elastic_port=9200
+    cat << EOM >> docker-compose.yml
+  $elastic_host:
+    image: elasticsearch:latest
+    container_name: magento2-devbox-elasticsearch
+    ports:
+      - "$elastic_port:$elastic_port"
+EOM
+fi
+
 magento_path='/var/www/magento2'
 main_host=web
 main_host_port=80
@@ -199,6 +214,14 @@ if [[ $install_redis = 1 ]]
             --as-session=$redis_session --host=$redis_host --magento-path=$magento_path
 fi
 
+if [[ $install_elasticsearch = 'y' ]]
+    then
+        docker exec -it --privileged -u magento2 magento2-devbox-web \
+            php -f /home/magento2/scripts/devbox magento:setup:elasticsearch  \
+                --db-host=$db_host --db-port=$db_port --db-user=$db_user --db-name=$db_name --db-password=$db_password \
+                --elastic-host=$elastic_host --elastic-port=$elastic_port
+fi
+
 if [[ $install_varnish = 1 ]]
     then
         varnish_file=/home/magento2/scripts/default.vcl
@@ -206,7 +229,7 @@ if [[ $install_varnish = 1 ]]
             php -f /home/magento2/scripts/devbox magento:setup:varnish  \
                 --db-host=$db_host --db-port=$db_port --db-user=$db_user --db-name=$db_name --db-password=$db_password \
                 --backend-host=$main_host --backend-port=$main_host_port \
-                --out-file-path=/home/magento2/scripts/default.vcl
+                --out-file-path=$varnish_file
 
         docker cp "$main_host_container:/$varnish_file" ./web/scripts/command/default.vcl
         docker cp ./web/scripts/command/default.vcl $varnish_host_container:/etc/varnish/default.vcl

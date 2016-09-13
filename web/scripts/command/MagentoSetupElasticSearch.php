@@ -10,10 +10,8 @@ require_once __DIR__ . '/../AbstractCommand.php';
 use MagentoDevBox\AbstractCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Magento\Framework\App\Bootstrap;
-use Magento\PageCache\Model\Config;
 
-class MagentoSetupVarnish extends AbstractCommand
+class MagentoSetupElasticSearch extends AbstractCommand
 {
     /**
      * @var \PDO
@@ -25,9 +23,9 @@ class MagentoSetupVarnish extends AbstractCommand
      */
     protected function configure()
     {
-        $this->setName('magento:setup:varnish')
-            ->setDescription('Setup varnish')
-            ->setHelp('This command allows you to setup Varnish inside magento.');
+        $this->setName('magento:setup:elasticsearch')
+            ->setDescription('Setup ElasticSearch for Magento')
+            ->setHelp('This command allows you to setup ElasticSearch for Magento.');
 
         parent::configure();
     }
@@ -35,52 +33,28 @@ class MagentoSetupVarnish extends AbstractCommand
     /**
      * {@inheritdoc}
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
-    {
-        $this->saveConfig($input, $output);
-
-        require $input->getOption('magento-dir') . '/app/bootstrap.php';
-        $bootstrap = Bootstrap::create(BP, $_SERVER);
-
-        $om = $bootstrap->getObjectManager();
-
-        /** @var Config $config */
-        $config = $om->get(Config::class);
-        $content = $config->getVclFile(Config::VARNISH_4_CONFIGURATION_PATH);
-
-        file_put_contents($input->getOption('out-file-path'), $content);
-
-        return null;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    private function saveConfig(InputInterface $input, OutputInterface $output)
+    public function execute(InputInterface $input, OutputInterface $output)
     {
         $this->getPDOConnection($input)->exec(
             'DELETE FROM core_config_data'
-                . ' WHERE path = "system/full_page_cache/caching_application" '
-                    . ' OR path like "system/full_page_cache/varnish/%";'
+            . ' WHERE path = "catalog/search/elasticsearch_server_hostname" '
+            . ' OR path = "catalog/search/elasticsearch_server_port"'
+            . ' OR path = "catalog/search/engine";'
         );
 
         $config = [
             [
-                'path' => 'system/full_page_cache/caching_application',
-                'value' => 2
+                'path' => 'catalog/search/engine',
+                'value' => 'elasticsearch'
             ],
             [
-                'path' => 'system/full_page_cache/varnish/access_list',
-                'value' => $input->getOption('backend-host')
+                'path' => 'catalog/search/elasticsearch_server_hostname',
+                'value' => $input->getOption('elastic-host')
             ],
             [
-                'path' => 'system/full_page_cache/varnish/backend_host',
-                'value' => $input->getOption('backend-host')
-            ],
-            [
-                'path' => 'system/full_page_cache/varnish/backend_port',
-                'value' => $input->getOption('backend-port')
-            ],
+                'path' => 'catalog/search/elasticsearch_server_port',
+                'value' => $input->getOption('elastic-port')
+            ]
         ];
 
         $stmt = $this->getPDOConnection($input)->prepare(
@@ -145,29 +119,23 @@ class MagentoSetupVarnish extends AbstractCommand
                 'description' => 'Magento Mysql database',
                 'question' => 'Please enter magento Mysql database %default%'
             ],
-            'backend-host' => [
+            'elastic-host' => [
                 'initial' => true,
-                'default' => 'web',
-                'description' => 'Varnish Backend Host',
-                'question' => 'Please enter Varnish Backend Host %default%'
+                'default' => 'elasticsearch',
+                'description' => 'Magento ElasticSearch host',
+                'question' => 'Please enter magento ElasticSearch host %default%'
             ],
-            'backend-port' => [
+            'elastic-port' => [
                 'initial' => true,
-                'default' => 80,
-                'description' => 'Varnish Backend Port',
-                'question' => 'Please enter Varnish Backend Port %default%'
+                'default' => 9200,
+                'description' => 'Magento ElasticSearch port',
+                'question' => 'Please enter magento ElasticSearch port %default%'
             ],
             'magento-dir' => [
                 'initial' => true,
                 'default' => '/var/www/magento2',
                 'description' => 'Magento root directory',
                 'question' => 'Please enter Magento root directory %default%'
-            ],
-            'out-file-path' => [
-                'initial' => true,
-                'default' => '/home/magento2/scripts/default.vcl',
-                'description' => 'Magento root directory',
-                'question' => 'Please enter output configuration file path %default%'
             ],
         ];
     }

@@ -28,10 +28,13 @@ services:
   varnish:
     image: magento/magento2devbox_varnish:latest
     container_name: magento2-devbox-varnish
-    links:
-      - web:web
     ports:
       - "1748:6081"
+  elasticsearch:
+      image: elasticsearch:latest
+      container_name: magento2-devbox-elasticsearch
+      ports:
+        - "9200:9200"
   web:
     image: magento/magento2devbox_web:latest
     container_name: magento2-devbox-web
