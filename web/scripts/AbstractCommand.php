@@ -201,41 +201,37 @@ abstract class AbstractCommand extends Command
      *
      * @param array|string $commands
      * @param OutputInterface|null $output
-     * @return array
+     * @return void
      * @throws \Exception
      */
     protected function executeCommands($commands, OutputInterface $output = null)
     {
         $commands = (array)$commands;
-        $returnCodes = [];
 
         foreach ($commands as $command) {
             if ($output) {
                 $output->writeln(['Executing shell command:', $command]);
             }
 
-            $commandOutput = [];
-            $returnCode = 0;
-            exec($command, $commandOutput, $returnCode);
-            $returnCodes[] = $returnCode;
-            $output = implode("\n", $commandOutput) . "\n";
+            passthru($command, $returnCode);
+
             if ($returnCode > 0) {
                 throw new \Exception('Command failed to execute');
-            } else {
-                echo $output;
             }
         }
-        return $returnCodes;
     }
 
     /**
+     * Check whether command exists
+     *
      * @param string $command
      * @return bool
      */
     protected function commandExist($command)
     {
         $result = shell_exec('which ' . $command);
-        return (empty($result) ? false : true);
+
+        return (bool)$result;
     }
 
     /**
