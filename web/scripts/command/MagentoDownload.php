@@ -66,7 +66,7 @@ class MagentoDownload extends AbstractCommand
             $this->executeCommands('cd /var/www/magento2 && composer install', $output);
         }
 
-        $output->writeln('To setup magento run <info>MagentoSetup</info> command next');
+        $output->writeln('To setup magento run <info>devbox magento:setup</info> command next');
     }
 
     /**

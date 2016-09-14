@@ -87,7 +87,7 @@ class MagentoSetup extends AbstractCommand
             }
         }
 
-        $output->writeln('To prepare magento sources run <info>MagentoPrepare</info> command next');
+        $output->writeln('To prepare magento sources run <info>devbox magento:prepare</info> command next');
     }
 
     /**
