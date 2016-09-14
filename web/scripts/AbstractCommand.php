@@ -222,13 +222,16 @@ abstract class AbstractCommand extends Command
     }
 
     /**
+     * Check whether command exists
+     *
      * @param string $command
      * @return bool
      */
     protected function commandExist($command)
     {
         $result = shell_exec('which ' . $command);
-        return (empty($result) ? false : true);
+
+        return (bool)$result;
     }
 
     /**
