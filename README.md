@@ -1,3 +1,5 @@
+# The repo is deprecated and unmaintained
+
 # Magento 2 Application with Docker Compose for developers
 
 ## Prerequisites
